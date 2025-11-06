@@ -316,6 +316,15 @@
                 </div>
                 <button class="test-button" onclick="testHealth()">檢查系統健康</button>
                 <div id="health-result"></div>
+
+                <!-- 此區塊的日誌 -->
+                <div class="log-container" style="display: none;">
+                    <div class="log-header">
+                        <h3>📋 請求/回應日誌</h3>
+                        <button class="clear-log-btn" onclick="clearSectionLogs('health-logs')">清除</button>
+                    </div>
+                    <div id="health-logs"></div>
+                </div>
             </div>
         </div>
 
@@ -325,6 +334,15 @@
                 <h2>🔌 Maximo 連接測試</h2>
                 <button class="test-button" onclick="testMaximoConnection()">測試 Maximo 連接</button>
                 <div id="maximo-result"></div>
+
+                <!-- 此區塊的日誌 -->
+                <div class="log-container" style="display: none;">
+                    <div class="log-header">
+                        <h3>📋 請求/回應日誌</h3>
+                        <button class="clear-log-btn" onclick="clearSectionLogs('maximo-logs')">清除</button>
+                    </div>
+                    <div id="maximo-logs"></div>
+                </div>
             </div>
         </div>
 
@@ -369,31 +387,34 @@
                 </div>
 
                 <div id="tools-result"></div>
+
+                <!-- 此區塊的日誌 -->
+                <div class="log-container" style="display: none;">
+                    <div class="log-header">
+                        <h3>📋 請求/回應日誌</h3>
+                        <button class="clear-log-btn" onclick="clearSectionLogs('tools-logs')">清除</button>
+                    </div>
+                    <div id="tools-logs"></div>
+                </div>
             </div>
         </div>
 
-        <!-- API Key 設定 -->
+        <!-- Maximo 認證設定 -->
         <div class="card">
             <div class="test-section">
-                <h2>🔑 API Key 設定</h2>
-                <p style="color: #666; margin-bottom: 15px;">若需要測試需要認證的端點，請輸入 MCP API Key</p>
+                <h2>🔑 Maximo 認證設定</h2>
+                <p style="color: #666; margin-bottom: 15px;">若需要測試需要認證的端點，請輸入 Maximo 用戶名和密碼</p>
                 <div class="input-group">
-                    <label>MCP API Key (選填):</label>
-                    <input type="password" id="api-key" placeholder="輸入您的 MCP API Key">
+                    <label>Maximo Username (選填):</label>
+                    <input type="text" id="maxauth-username" placeholder="輸入 Maximo 用戶名">
+                </div>
+                <div class="input-group">
+                    <label>Maximo Password (選填):</label>
+                    <input type="password" id="maxauth-password" placeholder="輸入 Maximo 密碼">
                 </div>
             </div>
         </div>
 
-        <!-- Request/Response Logs -->
-        <div class="card">
-            <div class="log-container">
-                <div class="log-header">
-                    <h3>📋 請求/回應日誌</h3>
-                    <button class="clear-log-btn" onclick="clearLogs()">清除日誌</button>
-                </div>
-                <div id="log-entries"></div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -405,8 +426,18 @@
         const serverUrl = urlParams.get('server') || localStorage.getItem('serverUrl') || defaultServer;
         document.getElementById('server-url').textContent = serverUrl;
 
-        // Log management
-        const logs = [];
+        // Log management - track current log target
+        let currentLogTarget = null;
+        const logs = {};
+
+        function setLogTarget(targetId) {
+            currentLogTarget = targetId;
+            // Show the log container for this section
+            const container = document.getElementById(targetId);
+            if (container) {
+                container.parentElement.style.display = 'block';
+            }
+        }
 
         function addLog(type, method, url, status, data) {
             const timestamp = new Date().toLocaleString('zh-TW', {
@@ -419,11 +450,18 @@
                 second: '2-digit'
             });
             const log = { type, method, url, status, data, timestamp };
-            logs.push(log);
-            displayLog(log);
+
+            // Store log in target-specific array
+            if (currentLogTarget) {
+                if (!logs[currentLogTarget]) {
+                    logs[currentLogTarget] = [];
+                }
+                logs[currentLogTarget].push(log);
+                displayLog(log, currentLogTarget);
+            }
         }
 
-        function displayLog(log) {
+        function displayLog(log, targetId) {
             const logDiv = document.createElement('div');
             logDiv.className = `log-entry log-${log.type}`;
 
@@ -448,25 +486,24 @@
                 <div class="log-data">${dataPreview}</div>
             `;
 
-            const container = document.getElementById('log-entries');
-            container.insertBefore(logDiv, container.firstChild);
+            const container = document.getElementById(targetId);
+            if (container) {
+                container.insertBefore(logDiv, container.firstChild);
 
-            // Keep only last 50 logs in DOM
-            while (container.children.length > 50) {
-                container.removeChild(container.lastChild);
+                // Keep only last 20 logs in each section
+                while (container.children.length > 20) {
+                    container.removeChild(container.lastChild);
+                }
             }
         }
 
-        function clearLogs() {
-            logs.length = 0;
-            document.getElementById('log-entries').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">日誌已清除</div>';
-        }
-
-        // Initialize log display on page load
-        function initLogs() {
-            const logContainer = document.getElementById('log-entries');
-            if (logContainer) {
-                logContainer.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">等待 HTTP 請求...</div>';
+        function clearSectionLogs(targetId) {
+            if (logs[targetId]) {
+                logs[targetId].length = 0;
+            }
+            const container = document.getElementById(targetId);
+            if (container) {
+                container.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">日誌已清除</div>';
             }
         }
 
@@ -508,12 +545,13 @@
         };
 
         function getHeaders() {
-            const apiKey = document.getElementById('api-key').value;
+            const username = document.getElementById('maxauth-username').value;
+            const password = document.getElementById('maxauth-password').value;
             const headers = {
                 'Content-Type': 'application/json'
             };
-            if (apiKey) {
-                headers['Authorization'] = `Bearer ${apiKey}`;
+            if (username && password) {
+                headers['maxauth'] = `${username}:${password}`;
             }
             return headers;
         }
@@ -527,6 +565,9 @@
             const button = event.target;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 檢測中...';
+
+            // Set log target for this test
+            setLogTarget('health-logs');
 
             try {
                 const response = await fetch(`${serverUrl}/health`);
@@ -567,6 +608,9 @@ ${JSON.stringify(data, null, 2)}`;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
 
+            // Set log target for this test
+            setLogTarget('maximo-logs');
+
             try {
                 const response = await fetch(`${serverUrl}/api/test-maximo`, {
                     method: 'POST',
@@ -580,7 +624,7 @@ ${JSON.stringify(data, null, 2)}`;
                     showResult('maximo-result', `✗ Maximo 連接失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
                 }
             } catch (error) {
-                showResult('maximo-result', `錯誤: ${error.message}\n\n請檢查:\n1. Maximo API URL 是否正確\n2. Maximo API Key 是否有效\n3. 網路是否可以連接到 Maximo`, 'error');
+                showResult('maximo-result', `錯誤: ${error.message}\n\n請檢查:\n1. Maximo API URL 是否正確\n2. Maximo 認證資訊（用戶名和密碼）是否正確\n3. 網路是否可以連接到 Maximo`, 'error');
             } finally {
                 button.disabled = false;
                 button.textContent = '測試 Maximo 連接';
@@ -599,6 +643,9 @@ ${JSON.stringify(data, null, 2)}`;
             const button = event.target;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
 
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
@@ -628,6 +675,9 @@ ${JSON.stringify(data, null, 2)}`;
             const button = event.target;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
 
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
@@ -666,6 +716,9 @@ ${JSON.stringify(data, null, 2)}`;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
 
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
                     method: 'POST',
@@ -694,6 +747,9 @@ ${JSON.stringify(data, null, 2)}`;
             const button = event.target;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
 
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
@@ -732,6 +788,9 @@ ${JSON.stringify(data, null, 2)}`;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
 
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
                     method: 'POST',
@@ -761,6 +820,9 @@ ${JSON.stringify(data, null, 2)}`;
             button.disabled = true;
             button.innerHTML = '<span class="loading"></span> 測試中...';
 
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
             try {
                 const response = await fetch(`${serverUrl}/api/test-tool`, {
                     method: 'POST',
@@ -785,9 +847,8 @@ ${JSON.stringify(data, null, 2)}`;
             }
         }
 
-        // 頁面載入時初始化日誌和執行健康檢查
+        // 頁面載入時執行健康檢查
         window.addEventListener('load', () => {
-            initLogs();
             setTimeout(testHealth, 500);
         });
     </script>
