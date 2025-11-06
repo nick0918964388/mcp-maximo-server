@@ -447,14 +447,17 @@ async def test_page(request: Request):
 middleware_list = []
 
 if settings.cors_enabled:
+    from starlette.middleware import Middleware
     from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
+
     middleware_list.append(
-        (StarletteCORSMiddleware, {
-            "allow_origins": settings.get_cors_origins_list(),
-            "allow_credentials": True,
-            "allow_methods": ["*"],
-            "allow_headers": ["*"],
-        })
+        Middleware(
+            StarletteCORSMiddleware,
+            allow_origins=settings.get_cors_origins_list(),
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
     )
 
 # Create the HTTP app
