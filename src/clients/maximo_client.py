@@ -83,13 +83,24 @@ class MaximoClient:
             await self._client.aclose()
             logger.info("Maximo API client closed")
 
-    def _build_headers(self, additional_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-        """Build HTTP headers for Maximo API requests"""
+    def _build_headers(self, additional_headers: Optional[Dict[str, str]] = None, use_maxauth: bool = False) -> Dict[str, str]:
+        """Build HTTP headers for Maximo API requests
+
+        Args:
+            additional_headers: Optional additional headers to include
+            use_maxauth: If True, use 'maxauth' header instead of 'apikey' (for whoami endpoint)
+        """
         headers = {
-            "apikey": self.api_key,
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+
+        # Choose authentication header based on endpoint type
+        if use_maxauth:
+            headers["maxauth"] = self.api_key
+        else:
+            headers["apikey"] = self.api_key
+
         if additional_headers:
             headers.update(additional_headers)
         return headers
@@ -155,13 +166,21 @@ class MaximoClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
+        use_maxauth: bool = False,
     ) -> Dict[str, Any]:
-        """Execute GET request to Maximo API"""
+        """Execute GET request to Maximo API
+
+        Args:
+            endpoint: API endpoint path
+            params: Query parameters
+            headers: Additional headers
+            use_maxauth: If True, use 'maxauth' header instead of 'apikey'
+        """
         client = await self._get_client()
         url = self._build_url(endpoint)
-        request_headers = self._build_headers(headers)
+        request_headers = self._build_headers(headers, use_maxauth=use_maxauth)
 
-        logger.debug("Maximo GET request", url=url, params=params)
+        logger.debug("Maximo GET request", url=url, params=params, auth_type="maxauth" if use_maxauth else "apikey")
 
         try:
             response = await client.get(url, params=params, headers=request_headers)
@@ -315,8 +334,8 @@ class MaximoClient:
     async def health_check(self) -> bool:
         """Check if Maximo API is accessible"""
         try:
-            # Try to access a lightweight endpoint
-            await self.get("/oslc/whoami")
+            # Try to access whoami endpoint (requires maxauth header)
+            await self.get("/oslc/whoami", use_maxauth=True)
             return True
         except Exception as e:
             logger.error("Maximo health check failed", error=str(e))
