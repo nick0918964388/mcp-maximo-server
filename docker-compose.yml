@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # MCP Maximo Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-maximo-server
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Application settings
+      - APP_NAME=MCP Maximo Server
+      - APP_VERSION=1.0.0
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=${DEBUG:-false}
+
+      # Server settings
+      - HOST=0.0.0.0
+      - PORT=8000
+
+      # Authentication
+      - MCP_API_KEY=${MCP_API_KEY}
+
+      # Maximo API settings
+      - MAXIMO_API_URL=${MAXIMO_API_URL}
+      - MAXIMO_API_KEY=${MAXIMO_API_KEY}
+      - MAXIMO_TIMEOUT=${MAXIMO_TIMEOUT:-30}
+
+      # Redis settings
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_ENABLED=true
+
+      # Cache settings
+      - CACHE_TTL_ASSET=${CACHE_TTL_ASSET:-600}
+      - CACHE_TTL_WORKORDER=${CACHE_TTL_WORKORDER:-300}
+      - CACHE_TTL_INVENTORY=${CACHE_TTL_INVENTORY:-600}
+
+      # Rate limiting
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=json
+
+      # CORS
+      - CORS_ENABLED=true
+      - CORS_ORIGINS=*
+
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

@@ -1,0 +1,47 @@
+# FastMCP and MCP SDK
+fastmcp>=0.2.0
+mcp>=1.0.0
+
+# FastAPI for HTTP/SSE server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# HTTP Client for Maximo API
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# Redis for caching
+redis>=5.0.0
+aioredis>=2.0.1
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Environment variables and configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Logging and monitoring
+structlog>=23.2.0
+python-json-logger>=2.0.7
+
+# Security
+cryptography>=41.0.7
+python-jose[cryptography]>=3.3.0
+
+# Utilities
+tenacity>=8.2.3  # Retry logic
+cachetools>=5.3.2
+
+# Testing
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+pytest-cov>=4.1.0
+httpx-mock>=0.15.0
+
+# Development
+black>=23.12.0
+flake8>=6.1.0
+mypy>=1.7.1
