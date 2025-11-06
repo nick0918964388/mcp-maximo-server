@@ -318,10 +318,18 @@ async def issue_inventory(
 
 
 # ============================================================
-# Health Check and FastAPI App
+# Get the FastAPI app
 # ============================================================
 
-@mcp.get("/health")
+# Get the FastAPI app
+app = mcp.get_asgi_app()
+
+
+# ============================================================
+# Health Check Endpoint
+# ============================================================
+
+@app.get("/health")
 async def health_check():
     """Health check endpoint"""
     cache_manager = get_cache_manager()
@@ -340,10 +348,6 @@ async def health_check():
 
     logger.info("Health check performed", **health_status)
     return health_status
-
-
-# Get the FastAPI app
-app = mcp.get_asgi_app()
 
 
 # ============================================================
