@@ -187,7 +187,15 @@ class MaximoClient:
         url = self._build_url(endpoint)
         request_headers = self._build_headers(headers, use_maxauth=use_maxauth)
 
-        logger.debug("Maximo GET request", url=url, params=params, auth_type="maxauth" if use_maxauth else "apikey")
+        # Mask sensitive headers for logging
+        masked_headers = {}
+        for key, value in request_headers.items():
+            if key.lower() in ['maxauth', 'apikey', 'authorization']:
+                masked_headers[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+            else:
+                masked_headers[key] = value
+
+        logger.debug("Maximo GET request", url=url, params=params, headers=masked_headers, auth_type="maxauth" if use_maxauth else "apikey")
 
         try:
             response = await client.get(url, params=params, headers=request_headers)
@@ -231,7 +239,15 @@ class MaximoClient:
         url = self._build_url(endpoint)
         request_headers = self._build_headers(headers)
 
-        logger.debug("Maximo POST request", url=url, data_keys=list(data.keys()))
+        # Mask sensitive headers for logging
+        masked_headers = {}
+        for key, value in request_headers.items():
+            if key.lower() in ['maxauth', 'apikey', 'authorization']:
+                masked_headers[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+            else:
+                masked_headers[key] = value
+
+        logger.debug("Maximo POST request", url=url, data_keys=list(data.keys()), headers=masked_headers)
 
         try:
             response = await client.post(url, json=data, headers=request_headers)
@@ -281,7 +297,15 @@ class MaximoClient:
             "patchtype": "MERGE",
         })
 
-        logger.debug("Maximo PATCH request", url=url, data_keys=list(data.keys()))
+        # Mask sensitive headers for logging
+        masked_headers = {}
+        for key, value in request_headers.items():
+            if key.lower() in ['maxauth', 'apikey', 'authorization']:
+                masked_headers[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+            else:
+                masked_headers[key] = value
+
+        logger.debug("Maximo PATCH request", url=url, data_keys=list(data.keys()), headers=masked_headers)
 
         try:
             response = await client.patch(url, json=data, headers=request_headers)
@@ -318,7 +342,15 @@ class MaximoClient:
         url = self._build_url(endpoint)
         request_headers = self._build_headers(headers)
 
-        logger.debug("Maximo DELETE request", url=url)
+        # Mask sensitive headers for logging
+        masked_headers = {}
+        for key, value in request_headers.items():
+            if key.lower() in ['maxauth', 'apikey', 'authorization']:
+                masked_headers[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+            else:
+                masked_headers[key] = value
+
+        logger.debug("Maximo DELETE request", url=url, headers=masked_headers)
 
         try:
             response = await client.delete(url, headers=request_headers)
