@@ -53,7 +53,8 @@ class MaximoClient:
     def __init__(self):
         # 確保 base_url 以 / 結尾，以便正確使用 urljoin
         self.base_url = settings.maximo_api_url.rstrip("/") + "/"
-        self.api_key = settings.maximo_api_key
+        self.api_key = settings.maximo_api_key        # 用於一般 API
+        self.maxauth = settings.maximo_maxauth        # 用於 whoami 端點
         self.timeout = settings.maximo_timeout
         self.max_retries = settings.maximo_max_retries
 
@@ -95,11 +96,11 @@ class MaximoClient:
             "Accept": "application/json",
         }
 
-        # Choose authentication header based on endpoint type
+        # Choose authentication header and credential based on endpoint type
         if use_maxauth:
-            headers["maxauth"] = self.api_key
+            headers["maxauth"] = self.maxauth  # 使用 MAXIMO_MAXAUTH
         else:
-            headers["apikey"] = self.api_key
+            headers["apikey"] = self.api_key    # 使用 MAXIMO_API_KEY
 
         if additional_headers:
             headers.update(additional_headers)

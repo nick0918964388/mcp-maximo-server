@@ -13,16 +13,20 @@
 # 生成方式: openssl rand -hex 32
 MCP_API_KEY=your-secure-mcp-api-key-here
 
-# Maximo API Key - 從 Maximo 系統獲取
+# Maximo API Key - 用於一般 API 查詢（資產、工單、庫存等）
 # 獲取方式: 登入 Maximo > Go To Applications > Users > 選擇您的用戶 > API Keys
 MAXIMO_API_KEY=your-maximo-api-key-here
+
+# Maximo MaxAuth - 用於 whoami 端點的認證
+# 這可能是與 MAXIMO_API_KEY 不同的認證憑證
+MAXIMO_MAXAUTH=your-maximo-maxauth-credential-here
 ```
 
 #### 已配置參數（可按需調整）
 
 ```bash
 # Maximo URL
-MAXIMO_API_URL=http://trs.webdw.xyz:9088/maximo
+MAXIMO_API_URL=http://tra.webtw.xyz:8888/maximo
 
 # 外部訪問端口
 PORT=8001
@@ -87,7 +91,8 @@ http://192.168.1.214:8001
 ## 檢查清單
 
 - [ ] `.env` 文件中已填寫 `MCP_API_KEY`
-- [ ] `.env` 文件中已填寫 `MAXIMO_API_KEY`
+- [ ] `.env` 文件中已填寫 `MAXIMO_API_KEY`（一般 API 使用）
+- [ ] `.env` 文件中已填寫 `MAXIMO_MAXAUTH`（whoami 端點使用）
 - [ ] `MAXIMO_API_URL` 正確指向您的 Maximo 實例
 - [ ] 執行 `docker-compose down` 停止舊容器
 - [ ] 執行 `docker-compose up -d --build` 啟動新容器

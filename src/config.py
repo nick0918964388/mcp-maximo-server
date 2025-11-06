@@ -29,7 +29,8 @@ class Settings(BaseSettings):
 
     # Maximo API settings
     maximo_api_url: str = Field(..., description="Maximo API base URL (e.g., https://maximo.company.com/maximo)")
-    maximo_api_key: str = Field(..., description="Maximo API key for authentication")
+    maximo_api_key: str = Field(..., description="Maximo API key for authentication (used for general APIs)")
+    maximo_maxauth: str = Field(..., description="Maximo maxauth credential for authentication (used for whoami endpoint)")
     maximo_timeout: int = Field(default=30, description="Maximo API request timeout in seconds")
     maximo_max_retries: int = Field(default=3, description="Maximum retry attempts for Maximo API calls")
 

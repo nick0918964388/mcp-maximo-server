@@ -26,6 +26,7 @@ services:
       # Maximo API settings
       - MAXIMO_API_URL=${MAXIMO_API_URL}
       - MAXIMO_API_KEY=${MAXIMO_API_KEY}
+      - MAXIMO_MAXAUTH=${MAXIMO_MAXAUTH}
       - MAXIMO_TIMEOUT=${MAXIMO_TIMEOUT:-30}
 
       # Redis settings
