@@ -51,7 +51,8 @@ class MaximoClient:
     """
 
     def __init__(self):
-        self.base_url = settings.maximo_api_url.rstrip("/")
+        # 確保 base_url 以 / 結尾，以便正確使用 urljoin
+        self.base_url = settings.maximo_api_url.rstrip("/") + "/"
         self.api_key = settings.maximo_api_key
         self.timeout = settings.maximo_timeout
         self.max_retries = settings.maximo_max_retries

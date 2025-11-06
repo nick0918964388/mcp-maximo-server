@@ -207,6 +207,94 @@
         .config-info strong {
             color: #333;
         }
+
+        /* 日誌區域樣式 */
+        .log-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            margin-top: 15px;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-left: 3px solid #666;
+            background: #2d2d2d;
+        }
+
+        .log-entry.log-request {
+            border-left-color: #4a9eff;
+        }
+
+        .log-entry.log-response {
+            border-left-color: #4caf50;
+        }
+
+        .log-entry.log-error {
+            border-left-color: #f44336;
+        }
+
+        .log-timestamp {
+            color: #888;
+            font-size: 0.75rem;
+        }
+
+        .log-method {
+            color: #4a9eff;
+            font-weight: bold;
+        }
+
+        .log-url {
+            color: #fff;
+        }
+
+        .log-status {
+            color: #4caf50;
+        }
+
+        .log-status.error {
+            color: #f44336;
+        }
+
+        .log-data {
+            color: #ddd;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .log-header h3 {
+            color: #fff;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .clear-log-btn {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .clear-log-btn:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body>
@@ -295,13 +383,129 @@
                 </div>
             </div>
         </div>
+
+        <!-- Request/Response Logs -->
+        <div class="card">
+            <div class="log-container">
+                <div class="log-header">
+                    <h3>📋 請求/回應日誌</h3>
+                    <button class="clear-log-btn" onclick="clearLogs()">清除日誌</button>
+                </div>
+                <div id="log-entries"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 從 URL 參數或 localStorage 獲取 server URL
+        // 從 URL 參數或 localStorage 獲取 server URL，預設使用 port 8001
         const urlParams = new URLSearchParams(window.location.search);
-        const serverUrl = urlParams.get('server') || localStorage.getItem('serverUrl') || 'http://localhost:8000';
+        const defaultServer = window.location.port ?
+            `http://${window.location.hostname}:${window.location.port}` :
+            'http://localhost:8001';
+        const serverUrl = urlParams.get('server') || localStorage.getItem('serverUrl') || defaultServer;
         document.getElementById('server-url').textContent = serverUrl;
+
+        // Log management
+        const logs = [];
+
+        function addLog(type, method, url, status, data) {
+            const timestamp = new Date().toLocaleString('zh-TW', {
+                hour12: false,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const log = { type, method, url, status, data, timestamp };
+            logs.push(log);
+            displayLog(log);
+        }
+
+        function displayLog(log) {
+            const logDiv = document.createElement('div');
+            logDiv.className = `log-entry log-${log.type}`;
+
+            let statusHtml = '';
+            if (log.status !== null && log.status !== undefined) {
+                const statusClass = log.status >= 400 ? 'error' : '';
+                statusHtml = `<div><span class="log-status ${statusClass}">Status: ${log.status}</span></div>`;
+            }
+
+            let dataPreview = '';
+            try {
+                const dataStr = typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2);
+                dataPreview = dataStr.length > 500 ? dataStr.substring(0, 500) + '...' : dataStr;
+            } catch (e) {
+                dataPreview = String(log.data);
+            }
+
+            logDiv.innerHTML = `
+                <div class="log-timestamp">${log.timestamp}</div>
+                <div><span class="log-method">${log.method}</span> <span class="log-url">${log.url}</span></div>
+                ${statusHtml}
+                <div class="log-data">${dataPreview}</div>
+            `;
+
+            const container = document.getElementById('log-entries');
+            container.insertBefore(logDiv, container.firstChild);
+
+            // Keep only last 50 logs in DOM
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function clearLogs() {
+            logs.length = 0;
+            document.getElementById('log-entries').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">日誌已清除</div>';
+        }
+
+        // Initialize log display on page load
+        function initLogs() {
+            const logContainer = document.getElementById('log-entries');
+            if (logContainer) {
+                logContainer.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">等待 HTTP 請求...</div>';
+            }
+        }
+
+        // Wrap fetch to log all requests
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const [url, options = {}] = args;
+            const method = options.method || 'GET';
+
+            // Log request
+            let requestData = {};
+            if (options.body) {
+                try {
+                    requestData = JSON.parse(options.body);
+                } catch (e) {
+                    requestData = { body: options.body };
+                }
+            }
+            addLog('request', method, url, null, requestData);
+
+            try {
+                const response = await originalFetch(...args);
+                const clone = response.clone();
+
+                // Try to parse response
+                let responseData;
+                try {
+                    responseData = await clone.json();
+                } catch (e) {
+                    responseData = { message: 'Non-JSON response' };
+                }
+
+                addLog('response', method, url, response.status, responseData);
+                return response;
+            } catch (error) {
+                addLog('error', method, url, null, { error: error.message, stack: error.stack });
+                throw error;
+            }
+        };
 
         function getHeaders() {
             const apiKey = document.getElementById('api-key').value;
@@ -581,8 +785,9 @@ ${JSON.stringify(data, null, 2)}`;
             }
         }
 
-        // 頁面載入時自動執行健康檢查
+        // 頁面載入時初始化日誌和執行健康檢查
         window.addEventListener('load', () => {
+            initLogs();
             setTimeout(testHealth, 500);
         });
     </script>
