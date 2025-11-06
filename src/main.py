@@ -5,16 +5,12 @@ Exposes Maximo API as MCP tools for Dify agents
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from starlette.requests import Request
+from starlette.responses import FileResponse, JSONResponse
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
 from src.config import settings
-from src.auth.api_key import verify_api_key, correlation_id_middleware
-from src.middleware.rate_limiter import rate_limit_middleware
 from src.clients.maximo_client import get_maximo_client, close_maximo_client
 from src.middleware.cache import get_cache_manager, close_cache_manager
 from src.utils.logger import get_logger
@@ -26,7 +22,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app):
     """Application lifespan context manager"""
     logger.info("Starting MCP Maximo Server", version=settings.app_version)
 
@@ -318,19 +314,17 @@ async def issue_inventory(
 
 
 # ============================================================
-# Get the FastAPI app
+# Custom HTTP Routes using FastMCP
 # ============================================================
 
-# Get the FastAPI app
-app = mcp.get_asgi_app()
+class TestToolRequest(BaseModel):
+    """Request model for testing MCP tools"""
+    tool: str
+    params: Dict[str, Any] = {}
 
 
-# ============================================================
-# Health Check Endpoint
-# ============================================================
-
-@app.get("/health")
-async def health_check():
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request):
     """Health check endpoint"""
     cache_manager = get_cache_manager()
     maximo_client = get_maximo_client()
@@ -347,32 +341,22 @@ async def health_check():
     }
 
     logger.info("Health check performed", **health_status)
-    return health_status
+    return JSONResponse(health_status)
 
 
-# ============================================================
-# Test API Endpoints for UI
-# ============================================================
-
-class TestToolRequest(BaseModel):
-    """Request model for testing MCP tools"""
-    tool: str
-    params: Dict[str, Any] = {}
-
-
-@app.post("/api/test-maximo")
-async def test_maximo_connection():
+@mcp.custom_route("/api/test-maximo", methods=["POST"])
+async def test_maximo_connection(request: Request):
     """Test Maximo API connection"""
     try:
         maximo_client = get_maximo_client()
         is_healthy = await maximo_client.health_check()
 
         if is_healthy:
-            return {
+            return JSONResponse({
                 "success": True,
                 "message": "Maximo connection successful",
                 "maximo_url": settings.maximo_api_url,
-            }
+            })
         else:
             return JSONResponse(
                 status_code=503,
@@ -393,12 +377,13 @@ async def test_maximo_connection():
         )
 
 
-@app.post("/api/test-tool")
-async def test_tool(request: TestToolRequest):
+@mcp.custom_route("/api/test-tool", methods=["POST"])
+async def test_tool(request: Request):
     """Test individual MCP tool execution"""
     try:
-        tool_name = request.tool
-        params = request.params
+        body = await request.json()
+        tool_name = body.get("tool")
+        params = body.get("params", {})
 
         # Map tool names to functions
         tool_map = {
@@ -411,77 +396,70 @@ async def test_tool(request: TestToolRequest):
         }
 
         if tool_name not in tool_map:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=400,
-                detail=f"Unknown tool: {tool_name}. Available tools: {list(tool_map.keys())}"
+                content={
+                    "error": f"Unknown tool: {tool_name}",
+                    "available_tools": list(tool_map.keys())
+                }
             )
 
         # Execute tool
         tool_func = tool_map[tool_name]
         result = await tool_func(**params)
 
-        return {
+        return JSONResponse({
             "success": True,
             "tool": tool_name,
             "params": params,
             "result": result,
-        }
+        })
 
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error("Tool test failed", tool=request.tool, error=str(e))
+        logger.error("Tool test failed", error=str(e))
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "tool": request.tool,
                 "error": str(e),
                 "error_type": type(e).__name__,
             }
         )
 
 
-@app.get("/")
-async def root():
+@mcp.custom_route("/", methods=["GET"])
+async def root(request: Request):
     """Redirect to test page"""
     return FileResponse("static/test.html")
 
 
-@app.get("/test")
-async def test_page():
+@mcp.custom_route("/test", methods=["GET"])
+async def test_page(request: Request):
     """Serve test page"""
     return FileResponse("static/test.html")
 
 
-# Mount static files (for test page assets)
-try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-except Exception as e:
-    logger.warning("Could not mount static files", error=str(e))
+# ============================================================
+# Create Starlette App with Middleware
+# ============================================================
 
-
-# Add middleware
-app.middleware("http")(correlation_id_middleware)
-app.middleware("http")(rate_limit_middleware)
+# Prepare middleware list
+middleware_list = []
 
 if settings.cors_enabled:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.get_cors_origins_list(),
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
+    middleware_list.append(
+        (StarletteCORSMiddleware, {
+            "allow_origins": settings.get_cors_origins_list(),
+            "allow_credentials": True,
+            "allow_methods": ["*"],
+            "allow_headers": ["*"],
+        })
     )
+
+# Create the HTTP app
+app = mcp.http_app(middleware=middleware_list)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug,
-        log_level=settings.log_level.lower(),
-    )
+    mcp.run(transport="http")
