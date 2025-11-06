@@ -2,9 +2,9 @@
 Configuration management for MCP Maximo Server
 Using Pydantic Settings for type-safe configuration
 """
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import Optional, Union
 
 
 class Settings(BaseSettings):
@@ -58,10 +58,22 @@ class Settings(BaseSettings):
 
     # CORS settings
     cors_enabled: bool = Field(default=True, description="Enable CORS")
-    cors_origins: list[str] = Field(default=["*"], description="Allowed CORS origins")
+    cors_origins: Union[str, list[str]] = Field(default=["*"], description="Allowed CORS origins")
 
     # Health check
     health_check_enabled: bool = Field(default=True, description="Enable health check endpoint")
+
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from string or list"""
+        if isinstance(v, str):
+            # If it's a single "*", return as list
+            if v.strip() == "*":
+                return ["*"]
+            # If it's comma-separated, split it
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
     model_config = SettingsConfigDict(
         env_file=".env",
