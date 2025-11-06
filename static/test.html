@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Maximo Server - 連接測試</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+        }
+
+        .test-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-button:active {
+            transform: translateY(0);
+        }
+
+        .test-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .result-box.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-box.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result-box.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-badge.healthy {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.unhealthy {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.unknown {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .config-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .config-info p {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .config-info strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 MCP Maximo Server</h1>
+            <p>連接測試與驗證工具</p>
+        </div>
+
+        <!-- 系統健康檢查 -->
+        <div class="card">
+            <div class="test-section">
+                <h2>
+                    🏥 系統健康檢查
+                    <span id="health-badge" class="status-badge unknown">未檢測</span>
+                </h2>
+                <div class="config-info">
+                    <p><strong>Server URL:</strong> <span id="server-url">http://localhost:8000</span></p>
+                </div>
+                <button class="test-button" onclick="testHealth()">檢查系統健康</button>
+                <div id="health-result"></div>
+            </div>
+        </div>
+
+        <!-- Maximo 連接測試 -->
+        <div class="card">
+            <div class="test-section">
+                <h2>🔌 Maximo 連接測試</h2>
+                <button class="test-button" onclick="testMaximoConnection()">測試 Maximo 連接</button>
+                <div id="maximo-result"></div>
+            </div>
+        </div>
+
+        <!-- MCP Tools 測試 -->
+        <div class="card">
+            <div class="test-section">
+                <h2>🛠️ MCP Tools 功能測試</h2>
+                <p style="color: #666; margin-bottom: 15px;">測試各項 Maximo API 工具是否正常運作（需要提供測試資料）</p>
+
+                <h3 style="color: #555; margin-top: 20px; margin-bottom: 10px;">資產管理測試</h3>
+                <div class="input-group">
+                    <label>Asset Number (測試用資產編號):</label>
+                    <input type="text" id="test-assetnum" placeholder="例如: PUMP001">
+                </div>
+                <div class="input-group">
+                    <label>Site ID:</label>
+                    <input type="text" id="test-siteid" placeholder="例如: BEDFORD">
+                </div>
+                <div class="tool-grid">
+                    <button class="test-button" onclick="testGetAsset()">測試查詢資產</button>
+                    <button class="test-button" onclick="testSearchAssets()">測試搜尋資產</button>
+                </div>
+
+                <h3 style="color: #555; margin-top: 20px; margin-bottom: 10px;">工單管理測試</h3>
+                <div class="input-group">
+                    <label>Work Order Number (測試用工單編號):</label>
+                    <input type="text" id="test-wonum" placeholder="例如: WO1001">
+                </div>
+                <div class="tool-grid">
+                    <button class="test-button" onclick="testGetWorkOrder()">測試查詢工單</button>
+                    <button class="test-button" onclick="testSearchWorkOrders()">測試搜尋工單</button>
+                </div>
+
+                <h3 style="color: #555; margin-top: 20px; margin-bottom: 10px;">庫存管理測試</h3>
+                <div class="input-group">
+                    <label>Item Number (測試用物料編號):</label>
+                    <input type="text" id="test-itemnum" placeholder="例如: FILTER-001">
+                </div>
+                <div class="tool-grid">
+                    <button class="test-button" onclick="testGetInventory()">測試查詢庫存</button>
+                    <button class="test-button" onclick="testSearchInventory()">測試搜尋庫存</button>
+                </div>
+
+                <div id="tools-result"></div>
+            </div>
+        </div>
+
+        <!-- API Key 設定 -->
+        <div class="card">
+            <div class="test-section">
+                <h2>🔑 API Key 設定</h2>
+                <p style="color: #666; margin-bottom: 15px;">若需要測試需要認證的端點，請輸入 MCP API Key</p>
+                <div class="input-group">
+                    <label>MCP API Key (選填):</label>
+                    <input type="password" id="api-key" placeholder="輸入您的 MCP API Key">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 從 URL 參數或 localStorage 獲取 server URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const serverUrl = urlParams.get('server') || localStorage.getItem('serverUrl') || 'http://localhost:8000';
+        document.getElementById('server-url').textContent = serverUrl;
+
+        function getHeaders() {
+            const apiKey = document.getElementById('api-key').value;
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (apiKey) {
+                headers['Authorization'] = `Bearer ${apiKey}`;
+            }
+            return headers;
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result-box ${type}">${message}</div>`;
+        }
+
+        async function testHealth() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 檢測中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                const data = await response.json();
+
+                const badge = document.getElementById('health-badge');
+                if (data.status === 'healthy') {
+                    badge.className = 'status-badge healthy';
+                    badge.textContent = '✓ 健康';
+                } else {
+                    badge.className = 'status-badge unhealthy';
+                    badge.textContent = '✗ 異常';
+                }
+
+                const resultText = `狀態: ${data.status}
+版本: ${data.version}
+環境: ${data.environment}
+快取狀態: ${data.cache}
+Maximo 連接: ${data.maximo}
+
+完整回應:
+${JSON.stringify(data, null, 2)}`;
+
+                showResult('health-result', resultText, data.status === 'healthy' ? 'success' : 'error');
+            } catch (error) {
+                const badge = document.getElementById('health-badge');
+                badge.className = 'status-badge unhealthy';
+                badge.textContent = '✗ 錯誤';
+                showResult('health-result', `錯誤: ${error.message}\n\n請確認:\n1. MCP Server 是否正在運行\n2. Server URL 是否正確: ${serverUrl}\n3. 網路連接是否正常`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '檢查系統健康';
+            }
+        }
+
+        async function testMaximoConnection() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-maximo`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showResult('maximo-result', `✓ Maximo 連接成功！\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('maximo-result', `✗ Maximo 連接失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('maximo-result', `錯誤: ${error.message}\n\n請檢查:\n1. Maximo API URL 是否正確\n2. Maximo API Key 是否有效\n3. 網路是否可以連接到 Maximo`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試 Maximo 連接';
+            }
+        }
+
+        async function testGetAsset() {
+            const assetnum = document.getElementById('test-assetnum').value;
+            const siteid = document.getElementById('test-siteid').value;
+
+            if (!assetnum) {
+                showResult('tools-result', '請輸入 Asset Number', 'error');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'get_asset',
+                        params: { assetnum, siteid }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 查詢資產成功！\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 查詢失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試查詢資產';
+            }
+        }
+
+        async function testSearchAssets() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'search_assets',
+                        params: { page_size: 5 }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 搜尋資產成功！\n找到 ${data.result?.length || 0} 筆資料\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 搜尋失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試搜尋資產';
+            }
+        }
+
+        async function testGetWorkOrder() {
+            const wonum = document.getElementById('test-wonum').value;
+            const siteid = document.getElementById('test-siteid').value;
+
+            if (!wonum) {
+                showResult('tools-result', '請輸入 Work Order Number', 'error');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'get_work_order',
+                        params: { wonum, siteid }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 查詢工單成功！\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 查詢失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試查詢工單';
+            }
+        }
+
+        async function testSearchWorkOrders() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'search_work_orders',
+                        params: { page_size: 5 }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 搜尋工單成功！\n找到 ${data.result?.length || 0} 筆資料\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 搜尋失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試搜尋工單';
+            }
+        }
+
+        async function testGetInventory() {
+            const itemnum = document.getElementById('test-itemnum').value;
+            const siteid = document.getElementById('test-siteid').value;
+
+            if (!itemnum) {
+                showResult('tools-result', '請輸入 Item Number', 'error');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'get_inventory',
+                        params: { itemnum, siteid }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 查詢庫存成功！\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 查詢失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試查詢庫存';
+            }
+        }
+
+        async function testSearchInventory() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'search_inventory',
+                        params: { page_size: 5 }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 搜尋庫存成功！\n找到 ${data.result?.length || 0} 筆資料\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 搜尋失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試搜尋庫存';
+            }
+        }
+
+        // 頁面載入時自動執行健康檢查
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 500);
+        });
+    </script>
+</body>
+</html>

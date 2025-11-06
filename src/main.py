@@ -5,9 +5,12 @@ Exposes Maximo API as MCP tools for Dify agents
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from fastmcp import FastMCP
+from pydantic import BaseModel
 
 from src.config import settings
 from src.auth.api_key import verify_api_key, correlation_id_middleware
@@ -341,6 +344,117 @@ async def health_check():
 
 # Get the FastAPI app
 app = mcp.get_asgi_app()
+
+
+# ============================================================
+# Test API Endpoints for UI
+# ============================================================
+
+class TestToolRequest(BaseModel):
+    """Request model for testing MCP tools"""
+    tool: str
+    params: Dict[str, Any] = {}
+
+
+@app.post("/api/test-maximo")
+async def test_maximo_connection():
+    """Test Maximo API connection"""
+    try:
+        maximo_client = get_maximo_client()
+        is_healthy = await maximo_client.health_check()
+
+        if is_healthy:
+            return {
+                "success": True,
+                "message": "Maximo connection successful",
+                "maximo_url": settings.maximo_api_url,
+            }
+        else:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "message": "Maximo connection failed",
+                    "maximo_url": settings.maximo_api_url,
+                }
+            )
+    except Exception as e:
+        logger.error("Maximo connection test failed", error=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Error testing Maximo connection: {str(e)}",
+            }
+        )
+
+
+@app.post("/api/test-tool")
+async def test_tool(request: TestToolRequest):
+    """Test individual MCP tool execution"""
+    try:
+        tool_name = request.tool
+        params = request.params
+
+        # Map tool names to functions
+        tool_map = {
+            "get_asset": asset_tools.get_asset,
+            "search_assets": asset_tools.search_assets,
+            "get_work_order": workorder_tools.get_work_order,
+            "search_work_orders": workorder_tools.search_work_orders,
+            "get_inventory": inventory_tools.get_inventory,
+            "search_inventory": inventory_tools.search_inventory,
+        }
+
+        if tool_name not in tool_map:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown tool: {tool_name}. Available tools: {list(tool_map.keys())}"
+            )
+
+        # Execute tool
+        tool_func = tool_map[tool_name]
+        result = await tool_func(**params)
+
+        return {
+            "success": True,
+            "tool": tool_name,
+            "params": params,
+            "result": result,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Tool test failed", tool=request.tool, error=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "tool": request.tool,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            }
+        )
+
+
+@app.get("/")
+async def root():
+    """Redirect to test page"""
+    return FileResponse("static/test.html")
+
+
+@app.get("/test")
+async def test_page():
+    """Serve test page"""
+    return FileResponse("static/test.html")
+
+
+# Mount static files (for test page assets)
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+except Exception as e:
+    logger.warning("Could not mount static files", error=str(e))
 
 
 # Add middleware
