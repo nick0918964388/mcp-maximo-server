@@ -11,7 +11,11 @@ logger = get_logger(__name__)
 
 
 @cached('workorder_detail')
-async def get_work_order(wonum: str, siteid: Optional[str] = None) -> Dict[str, Any]:
+async def get_work_order(
+    wonum: str,
+    siteid: Optional[str] = None,
+    _headers: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
     """Get work order details by work order number"""
     logger.info("Getting work order", wonum=wonum, siteid=siteid)
 
@@ -29,7 +33,7 @@ async def get_work_order(wonum: str, siteid: Optional[str] = None) -> Dict[str, 
 
         params["oslc.where"] = " and ".join(where_parts)
 
-        response = await client.get("/oslc/os/mxwo", params=params)
+        response = await client.get("/oslc/os/mxwo", params=params, headers=_headers)
 
         members = response.get("member", [])
         if not members:
@@ -56,6 +60,7 @@ async def search_work_orders(
     location: Optional[str] = None,
     siteid: Optional[str] = None,
     page_size: int = 100,
+    _headers: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """Search work orders with filters"""
     logger.info("Searching work orders", query=query, status=status)
@@ -92,7 +97,7 @@ async def search_work_orders(
         if where_parts:
             params["oslc.where"] = " and ".join(where_parts)
 
-        response = await client.get("/oslc/os/mxwo", params=params)
+        response = await client.get("/oslc/os/mxwo", params=params, headers=_headers)
 
         work_orders = response.get("member", [])
         logger.info("Work orders search completed", count=len(work_orders))

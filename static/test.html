@@ -551,7 +551,10 @@
                 'Content-Type': 'application/json'
             };
             if (username && password) {
-                headers['maxauth'] = `${username}:${password}`;
+                // Encode username:password to Base64
+                const credentials = `${username}:${password}`;
+                const base64Credentials = btoa(credentials);
+                headers['maxauth'] = base64Credentials;
             }
             return headers;
         }

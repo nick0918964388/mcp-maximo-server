@@ -96,8 +96,14 @@ class MaximoClient:
             "Accept": "application/json",
         }
 
+        # Check if maxauth is provided in additional_headers (from frontend)
+        has_external_maxauth = additional_headers and "maxauth" in additional_headers
+
         # Choose authentication header and credential based on endpoint type
-        if use_maxauth:
+        if has_external_maxauth:
+            # Use maxauth from additional_headers (already Base64 encoded from frontend)
+            pass  # Will be added via headers.update(additional_headers) below
+        elif use_maxauth:
             headers["maxauth"] = self.maxauth  # 使用 MAXIMO_MAXAUTH
         else:
             headers["apikey"] = self.api_key    # 使用 MAXIMO_API_KEY

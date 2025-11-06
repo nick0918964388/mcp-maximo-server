@@ -11,7 +11,12 @@ logger = get_logger(__name__)
 
 
 @cached('inventory_detail')
-async def get_inventory(itemnum: str, siteid: Optional[str] = None, location: Optional[str] = None) -> Dict[str, Any]:
+async def get_inventory(
+    itemnum: str,
+    siteid: Optional[str] = None,
+    location: Optional[str] = None,
+    _headers: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
     """Get inventory item details"""
     logger.info("Getting inventory", itemnum=itemnum, siteid=siteid, location=location)
 
@@ -31,7 +36,7 @@ async def get_inventory(itemnum: str, siteid: Optional[str] = None, location: Op
 
         params["oslc.where"] = " and ".join(where_parts)
 
-        response = await client.get("/oslc/os/mxapiinventory", params=params)
+        response = await client.get("/oslc/os/mxapiinventory", params=params, headers=_headers)
 
         members = response.get("member", [])
         if not members:
@@ -56,6 +61,7 @@ async def search_inventory(
     siteid: Optional[str] = None,
     location: Optional[str] = None,
     page_size: int = 100,
+    _headers: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """Search inventory items"""
     logger.info("Searching inventory", query=query, low_stock=low_stock)
@@ -86,7 +92,7 @@ async def search_inventory(
         if where_parts:
             params["oslc.where"] = " and ".join(where_parts)
 
-        response = await client.get("/oslc/os/mxapiinventory", params=params)
+        response = await client.get("/oslc/os/mxapiinventory", params=params, headers=_headers)
 
         items = response.get("member", [])
         logger.info("Inventory search completed", count=len(items))

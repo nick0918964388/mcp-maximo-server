@@ -385,6 +385,13 @@ async def test_tool(request: Request):
         tool_name = body.get("tool")
         params = body.get("params", {})
 
+        # Extract maxauth from request headers if present
+        maxauth = request.headers.get("maxauth")
+        headers = {}
+        if maxauth:
+            headers["maxauth"] = maxauth
+            logger.debug("Using maxauth from request header")
+
         # Map tool names to functions
         tool_map = {
             "get_asset": asset_tools.get_asset,
@@ -404,8 +411,10 @@ async def test_tool(request: Request):
                 }
             )
 
-        # Execute tool
+        # Execute tool with additional headers if present
         tool_func = tool_map[tool_name]
+        if headers:
+            params["_headers"] = headers
         result = await tool_func(**params)
 
         return JSONResponse({

@@ -12,13 +12,18 @@ logger = get_logger(__name__)
 
 
 @cached('asset_detail')
-async def get_asset(assetnum: str, siteid: Optional[str] = None) -> Dict[str, Any]:
+async def get_asset(
+    assetnum: str,
+    siteid: Optional[str] = None,
+    _headers: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
     """
     Get asset details by asset number
 
     Args:
         assetnum: Asset number
         siteid: Site ID (optional)
+        _headers: Internal parameter for additional headers (e.g., maxauth from frontend)
 
     Returns:
         Asset details dictionary
@@ -42,7 +47,7 @@ async def get_asset(assetnum: str, siteid: Optional[str] = None) -> Dict[str, An
         params["oslc.where"] = " and ".join(where_parts)
 
         # Execute request
-        response = await client.get("/oslc/os/mxapiasset", params=params)
+        response = await client.get("/oslc/os/mxapiasset", params=params, headers=_headers)
 
         # Extract asset from response
         members = response.get("member", [])
@@ -69,6 +74,7 @@ async def search_assets(
     assettype: Optional[str] = None,
     siteid: Optional[str] = None,
     page_size: int = 100,
+    _headers: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Search assets with filters
@@ -80,6 +86,7 @@ async def search_assets(
         assettype: Asset type filter
         siteid: Site ID filter
         page_size: Maximum number of results (default: 100)
+        _headers: Internal parameter for additional headers (e.g., maxauth from frontend)
 
     Returns:
         List of asset dictionaries
@@ -119,7 +126,7 @@ async def search_assets(
             params["oslc.where"] = " and ".join(where_parts)
 
         # Execute request
-        response = await client.get("/oslc/os/mxapiasset", params=params)
+        response = await client.get("/oslc/os/mxapiasset", params=params, headers=_headers)
 
         # Extract assets from response
         assets = response.get("member", [])
