@@ -16,7 +16,7 @@ from src.middleware.cache import get_cache_manager, close_cache_manager
 from src.utils.logger import get_logger
 
 # Import tools
-from src.tools import asset_tools, workorder_tools, inventory_tools
+from src.tools import asset_tools, workorder_tools, inventory_tools, user_tools
 
 logger = get_logger(__name__)
 
@@ -314,6 +314,63 @@ async def issue_inventory(
 
 
 # ============================================================
+# MCP TOOLS - User Management
+# ============================================================
+
+@mcp.tool()
+async def get_user_status(userid: str) -> Dict[str, Any]:
+    """
+    Get user account status and details from Maximo
+
+    Args:
+        userid: User ID (login username)
+
+    Returns:
+        User details including status, locked status, failed login count, etc.
+    """
+    return await user_tools.get_user_status(userid)
+
+
+@mcp.tool()
+async def search_users(
+    query: Optional[str] = None,
+    status: Optional[str] = None,
+    personid: Optional[str] = None,
+    locked_only: bool = False,
+    page_size: int = 100,
+) -> List[Dict[str, Any]]:
+    """
+    Search users in Maximo with filters
+
+    Args:
+        query: Search text (searches userid, displayname, personid)
+        status: Filter by user status (e.g., ACTIVE, INACTIVE)
+        personid: Filter by person ID
+        locked_only: If True, only return locked accounts
+        page_size: Maximum results to return (default: 100)
+
+    Returns:
+        List of matching users
+    """
+    return await user_tools.search_users(query, status, personid, locked_only, page_size)
+
+
+@mcp.tool()
+async def unlock_user_account(userid: str, memo: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Unlock a user account in Maximo by resetting lock status and failed login count
+
+    Args:
+        userid: User ID to unlock
+        memo: Optional memo for the unlock operation
+
+    Returns:
+        Updated user details
+    """
+    return await user_tools.unlock_user_account(userid, memo)
+
+
+# ============================================================
 # Custom HTTP Routes using FastMCP
 # ============================================================
 
@@ -400,6 +457,9 @@ async def test_tool(request: Request):
             "search_work_orders": workorder_tools.search_work_orders,
             "get_inventory": inventory_tools.get_inventory,
             "search_inventory": inventory_tools.search_inventory,
+            "get_user_status": user_tools.get_user_status,
+            "search_users": user_tools.search_users,
+            "unlock_user_account": user_tools.unlock_user_account,
         }
 
         if tool_name not in tool_map:
