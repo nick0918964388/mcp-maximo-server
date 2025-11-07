@@ -160,7 +160,7 @@ http://localhost:8000/test
 {
   "mcpServers": {
     "maximo": {
-      "url": "http://your-server-host:8000/sse",
+      "url": "http://your-server-host:8000",
       "transport": "sse",
       "headers": {
         "Authorization": "Bearer YOUR_MCP_API_KEY"
@@ -171,10 +171,25 @@ http://localhost:8000/test
 ```
 
 **重要說明：**
-- MCP 端點路徑：`/sse`
+- MCP 端點：服務器根路徑 `/`（使用 SSE 傳輸）
 - 傳輸模式：SSE (Server-Sent Events)
 - 確保 `YOUR_MCP_API_KEY` 與 `.env` 文件中的 `MCP_API_KEY` 一致
 - 替換 `your-server-host:8000` 為您的實際服務器地址和端口
+
+**實際使用範例：**
+```json
+{
+  "mcpServers": {
+    "maximo": {
+      "url": "http://traapi1.mas4dev.xyz:8001",
+      "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer your-mcp-api-key"
+      }
+    }
+  }
+}
+```
 
 ### 在 Dify Agent 中使用
 

@@ -529,37 +529,12 @@ if settings.cors_enabled:
         )
     )
 
-# Create the HTTP app with SSE endpoint
-from starlette.applications import Starlette
-from starlette.routing import Mount
-from fastmcp.server.http import create_sse_app
-
-# Get the base app with custom routes (includes /health, /test, etc.)
-base_app = mcp.http_app(middleware=middleware_list)
-
-# Create SSE app for Dify compatibility
-# Configure paths so that:
-# - GET /sse -> SSE event stream
-# - POST /sse/messages -> JSON-RPC messages
-sse_app = create_sse_app(
-    mcp,
-    message_path="/messages",  # Will be /sse/messages
-    sse_path=""                # Will be /sse (empty string = mount point)
-)
-
-# Create main app with MCP protocol endpoints
-app = Starlette(
-    routes=[
-        # Mount SSE endpoint (for Dify compatibility)
-        Mount("/sse", app=sse_app),
-        # Mount all custom routes at root
-        Mount("/", app=base_app),
-    ],
-    lifespan=lifespan
-)
+# Create the HTTP app
+# Use FastMCP's built-in http_app which includes all custom routes
+app = mcp.http_app(middleware=middleware_list)
 
 
 if __name__ == "__main__":
-    # For direct Python execution: use mcp.run() which handles everything
-    import uvicorn
-    uvicorn.run(app, host=settings.host, port=settings.port)
+    # Run with SSE transport for Dify compatibility
+    # This will create endpoint at / (root)
+    mcp.run(transport="sse", host=settings.host, port=settings.port)
