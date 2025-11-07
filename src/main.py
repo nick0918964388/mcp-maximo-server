@@ -529,12 +529,28 @@ if settings.cors_enabled:
         )
     )
 
-# Create the HTTP app
-# For uvicorn: use mcp.http_app() which includes custom routes
-app = mcp.http_app(middleware=middleware_list)
+# Create the HTTP app with both SSE and MCP endpoints
+from starlette.applications import Starlette
+from starlette.routing import Mount
+
+# Get the base app with custom routes
+base_app = mcp.http_app(middleware=middleware_list)
+
+# Create main app with MCP protocol endpoints
+app = Starlette(
+    routes=[
+        # Mount SSE endpoint (for Dify compatibility)
+        Mount("/sse", app=mcp.sse_app()),
+        # Mount HTTP streaming endpoint (new MCP standard)
+        Mount("/mcp", app=mcp.mcp_app()),
+        # Mount custom routes at root
+        Mount("/", app=base_app),
+    ],
+    lifespan=lifespan
+)
 
 
 if __name__ == "__main__":
     # For direct Python execution: use mcp.run() which handles everything
-    # This will create MCP endpoint at /mcp
-    mcp.run(transport="http", host=settings.host, port=settings.port)
+    import uvicorn
+    uvicorn.run(app, host=settings.host, port=settings.port)

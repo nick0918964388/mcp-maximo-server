@@ -154,9 +154,42 @@ http://localhost:8000/test
 }
 ```
 
+**支援的傳輸模式：**
+
+1. **SSE 傳輸（推薦用於 Dify）**
+```json
+{
+  "mcpServers": {
+    "maximo": {
+      "url": "http://your-server-host:8000/sse",
+      "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}
+```
+
+2. **HTTP Streaming 傳輸（新標準）**
+```json
+{
+  "mcpServers": {
+    "maximo": {
+      "url": "http://your-server-host:8000/mcp",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}
+```
+
 **重要說明：**
-- MCP 端點路徑為 `/mcp`（不是 `/mcp/sse`）
-- 使用 `transport: "http"` （FastMCP 使用新的 Streamable HTTP 傳輸）
+- 服務器同時支援 `/sse` 和 `/mcp` 兩個端點
+- `/sse` - 使用 SSE (Server-Sent Events) 傳輸
+- `/mcp` - 使用 HTTP Streaming 傳輸（新 MCP 標準）
 - 確保 `YOUR_MCP_API_KEY` 與 `.env` 文件中的 `MCP_API_KEY` 一致
 
 ### 在 Dify Agent 中使用
