@@ -538,11 +538,13 @@ from fastmcp.server.http import create_sse_app
 base_app = mcp.http_app(middleware=middleware_list)
 
 # Create SSE app for Dify compatibility
-# SSE app expects POST requests at /messages and streams events at /
+# Configure paths so that:
+# - GET /sse -> SSE event stream
+# - POST /sse/messages -> JSON-RPC messages
 sse_app = create_sse_app(
     mcp,
-    message_path="/messages",  # Path for client to send JSON-RPC messages
-    sse_path="/"               # Path for SSE event stream
+    message_path="/messages",  # Will be /sse/messages
+    sse_path=""                # Will be /sse (empty string = mount point)
 )
 
 # Create main app with MCP protocol endpoints
