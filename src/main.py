@@ -532,18 +532,20 @@ if settings.cors_enabled:
 # Create the HTTP app with both SSE and MCP endpoints
 from starlette.applications import Starlette
 from starlette.routing import Mount
+from fastmcp.server.http import create_sse_app
 
-# Get the base app with custom routes
+# Get the base app with custom routes (includes /health, /test, etc.)
 base_app = mcp.http_app(middleware=middleware_list)
+
+# Create SSE app for Dify compatibility
+sse_app = create_sse_app(mcp)
 
 # Create main app with MCP protocol endpoints
 app = Starlette(
     routes=[
         # Mount SSE endpoint (for Dify compatibility)
-        Mount("/sse", app=mcp.sse_app()),
-        # Mount HTTP streaming endpoint (new MCP standard)
-        Mount("/mcp", app=mcp.mcp_app()),
-        # Mount custom routes at root
+        Mount("/sse", app=sse_app),
+        # Mount all custom routes at root
         Mount("/", app=base_app),
     ],
     lifespan=lifespan

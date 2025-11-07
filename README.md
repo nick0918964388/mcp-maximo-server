@@ -154,9 +154,8 @@ http://localhost:8000/test
 }
 ```
 
-**支援的傳輸模式：**
+**MCP 配置範例：**
 
-1. **SSE 傳輸（推薦用於 Dify）**
 ```json
 {
   "mcpServers": {
@@ -171,26 +170,11 @@ http://localhost:8000/test
 }
 ```
 
-2. **HTTP Streaming 傳輸（新標準）**
-```json
-{
-  "mcpServers": {
-    "maximo": {
-      "url": "http://your-server-host:8000/mcp",
-      "transport": "http",
-      "headers": {
-        "Authorization": "Bearer YOUR_MCP_API_KEY"
-      }
-    }
-  }
-}
-```
-
 **重要說明：**
-- 服務器同時支援 `/sse` 和 `/mcp` 兩個端點
-- `/sse` - 使用 SSE (Server-Sent Events) 傳輸
-- `/mcp` - 使用 HTTP Streaming 傳輸（新 MCP 標準）
+- MCP 端點路徑：`/sse`
+- 傳輸模式：SSE (Server-Sent Events)
 - 確保 `YOUR_MCP_API_KEY` 與 `.env` 文件中的 `MCP_API_KEY` 一致
+- 替換 `your-server-host:8000` 為您的實際服務器地址和端口
 
 ### 在 Dify Agent 中使用
 
