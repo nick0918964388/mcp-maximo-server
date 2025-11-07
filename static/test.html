@@ -386,6 +386,17 @@
                     <button class="test-button" onclick="testSearchInventory()">測試搜尋庫存</button>
                 </div>
 
+                <h3 style="color: #555; margin-top: 20px; margin-bottom: 10px;">用戶管理測試</h3>
+                <div class="input-group">
+                    <label>User ID (測試用用戶 ID):</label>
+                    <input type="text" id="test-userid" placeholder="例如: testuser">
+                </div>
+                <div class="tool-grid">
+                    <button class="test-button" onclick="testGetUserStatus()">測試查詢用戶狀態</button>
+                    <button class="test-button" onclick="testSearchUsers()">測試搜尋用戶</button>
+                    <button class="test-button" onclick="testUnlockUser()">測試解鎖帳號</button>
+                </div>
+
                 <div id="tools-result"></div>
 
                 <!-- 此區塊的日誌 -->
@@ -847,6 +858,145 @@ ${JSON.stringify(data, null, 2)}`;
             } finally {
                 button.disabled = false;
                 button.textContent = '測試搜尋庫存';
+            }
+        }
+
+        async function testGetUserStatus() {
+            const userid = document.getElementById('test-userid').value;
+
+            if (!userid) {
+                showResult('tools-result', '請輸入 User ID', 'error');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'get_user_status',
+                        params: { userid }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    const user = data.result;
+                    const statusInfo = `
+用戶狀態資訊:
+- User ID: ${user.userid}
+- 顯示名稱: ${user.displayname || 'N/A'}
+- 狀態: ${user.status}
+- 是否啟用: ${user.is_active ? '是' : '否'}
+- 是否鎖定: ${user.is_locked ? '是' : '否'}
+- 登入失敗次數: ${user.failed_login_count}
+- Email: ${user.emailaddress || 'N/A'}
+- 電話: ${user.primaryphone || 'N/A'}
+
+完整回應:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('tools-result', `✓ 查詢用戶狀態成功！\n${statusInfo}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 查詢失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試查詢用戶狀態';
+            }
+        }
+
+        async function testSearchUsers() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 測試中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'search_users',
+                        params: { page_size: 5 }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    const users = data.result || [];
+                    let summary = `找到 ${users.length} 個用戶\n\n`;
+                    if (users.length > 0) {
+                        summary += '用戶列表:\n';
+                        users.forEach((user, idx) => {
+                            summary += `${idx + 1}. ${user.userid} (${user.displayname || 'N/A'}) - 狀態: ${user.status}${user.is_locked ? ' [鎖定]' : ''}\n`;
+                        });
+                    }
+                    showResult('tools-result', `✓ 搜尋用戶成功！\n${summary}\n完整回應:\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 搜尋失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試搜尋用戶';
+            }
+        }
+
+        async function testUnlockUser() {
+            const userid = document.getElementById('test-userid').value;
+
+            if (!userid) {
+                showResult('tools-result', '請輸入 User ID', 'error');
+                return;
+            }
+
+            if (!confirm(`確定要解鎖用戶 "${userid}" 嗎？\n\n此操作將:\n1. 設定帳號狀態為 ACTIVE\n2. 清除鎖定狀態\n3. 重設登入失敗次數為 0`)) {
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> 解鎖中...';
+
+            // Set log target for this test
+            setLogTarget('tools-logs');
+
+            try {
+                const response = await fetch(`${serverUrl}/api/test-tool`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        tool: 'unlock_user_account',
+                        params: {
+                            userid,
+                            memo: '透過測試頁面解鎖'
+                        }
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('tools-result', `✓ 解鎖用戶成功！\n\n用戶 "${userid}" 已成功解鎖\n\n完整回應:\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('tools-result', `✗ 解鎖失敗\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult('tools-result', `錯誤: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = '測試解鎖帳號';
             }
         }
 
