@@ -1,6 +1,10 @@
 """
 MCP Tools for Maximo User Management
 Provides user status query and account unlock operations
+
+Object Structure: DMMAXUSER
+Database Table: MAXUSER
+API Endpoint: /oslc/os/dmmaxuser
 """
 from typing import Any, Dict, List, Optional
 
@@ -41,7 +45,7 @@ async def get_user_status(
         params["oslc.where"] = f'userid="{userid}"'
 
         # Execute request
-        response = await client.get("/oslc/os/mxuser", params=params, headers=_headers)
+        response = await client.get("/oslc/os/dmmaxuser", params=params, headers=_headers)
 
         # Extract user from response
         members = response.get("member", [])
@@ -124,7 +128,7 @@ async def search_users(
             params["oslc.where"] = " and ".join(where_parts)
 
         # Execute request
-        response = await client.get("/oslc/os/mxuser", params=params, headers=_headers)
+        response = await client.get("/oslc/os/dmmaxuser", params=params, headers=_headers)
 
         # Extract users from response
         users = response.get("member", [])

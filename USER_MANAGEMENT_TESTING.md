@@ -2,6 +2,12 @@
 
 本文檔說明如何測試新增的用戶帳號解鎖與狀態查詢功能。
 
+## Maximo 物件資訊
+
+- **物件結構**: DMMAXUSER
+- **資料表**: MAXUSER
+- **API 端點**: `/oslc/os/dmmaxuser`
+
 ## 新增的 MCP Tools
 
 ### 1. get_user_status
