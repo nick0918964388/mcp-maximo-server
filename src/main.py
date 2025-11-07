@@ -529,7 +529,7 @@ if settings.cors_enabled:
         )
     )
 
-# Create the HTTP app with both SSE and MCP endpoints
+# Create the HTTP app with SSE endpoint
 from starlette.applications import Starlette
 from starlette.routing import Mount
 from fastmcp.server.http import create_sse_app
@@ -538,7 +538,12 @@ from fastmcp.server.http import create_sse_app
 base_app = mcp.http_app(middleware=middleware_list)
 
 # Create SSE app for Dify compatibility
-sse_app = create_sse_app(mcp)
+# SSE app expects POST requests at /messages and streams events at /
+sse_app = create_sse_app(
+    mcp,
+    message_path="/messages",  # Path for client to send JSON-RPC messages
+    sse_path="/"               # Path for SSE event stream
+)
 
 # Create main app with MCP protocol endpoints
 app = Starlette(
