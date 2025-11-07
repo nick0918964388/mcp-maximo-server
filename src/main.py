@@ -530,8 +530,11 @@ if settings.cors_enabled:
     )
 
 # Create the HTTP app
+# For uvicorn: use mcp.http_app() which includes custom routes
 app = mcp.http_app(middleware=middleware_list)
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http")
+    # For direct Python execution: use mcp.run() which handles everything
+    # This will create MCP endpoint at /mcp
+    mcp.run(transport="http", host=settings.host, port=settings.port)

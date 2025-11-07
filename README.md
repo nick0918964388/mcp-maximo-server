@@ -142,15 +142,22 @@ http://localhost:8000/test
 
 ```json
 {
-  "maximo_server": {
-    "url": "http://your-server-host:8000/mcp/sse",
-    "headers": {
-      "Authorization": "Bearer YOUR_MCP_API_KEY"
-    },
-    "timeout": 30
+  "mcpServers": {
+    "maximo": {
+      "url": "http://your-server-host:8000/mcp",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
   }
 }
 ```
+
+**重要說明：**
+- MCP 端點路徑為 `/mcp`（不是 `/mcp/sse`）
+- 使用 `transport: "http"` （FastMCP 使用新的 Streamable HTTP 傳輸）
+- 確保 `YOUR_MCP_API_KEY` 與 `.env` 文件中的 `MCP_API_KEY` 一致
 
 ### 在 Dify Agent 中使用
 
